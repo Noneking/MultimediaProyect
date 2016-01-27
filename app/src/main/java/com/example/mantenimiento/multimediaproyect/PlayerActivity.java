@@ -6,9 +6,11 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.MediaController;
+import android.widget.Toast;
 
 import java.io.IOException;
 
@@ -17,6 +19,9 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
     private MediaController mediaController;
     private MediaPlayer mediaPlayer;
     private Handler handler;
+
+    private static final int PICKFILE_RESULT_CODE_AUDIO=1;
+    private static final int PICKFILE_RESULT_CODE_VIDEO=2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,7 +46,6 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
             public void onPrepared(MediaPlayer mp) {
                 handler.post(new Runnable() {
                     public void run() {
-                        // Se muestra el control en la pantalla. Tras 20 segundos de inactividad, el control se ocultará
                         mediaController.show(20000);
                         mediaPlayer.start();
                     }
@@ -49,6 +53,82 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
             }
         });
 
+        if(getIntent().getExtras()!=null){
+            Bundle bundle=getIntent().getExtras();
+            String url=bundle.getString("DATA");
+            Uri uri=Uri.parse(url);
+            try {
+                mediaPlayer = new MediaPlayer();
+                mediaController = new MediaController(this);
+                mediaController.setMediaPlayer(this);
+                mediaController.setAnchorView(findViewById(R.id.player_mainLayout));
+                mediaPlayer.setDataSource(this, uri);
+                mediaPlayer.prepare();
+                mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                    @Override
+                    public void onPrepared(MediaPlayer mp) {
+                        handler.post(new Runnable() {
+                            public void run() {
+                                mediaController.show(20000);
+                                mediaPlayer.start();
+                            }
+                        });
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    public void fileChooserOnClickEvent(View v){
+        //mediaPlayer.stop();
+        //Intent intent=new Intent(this, FileChooser.class);
+        //startActivityForResult(intent, RESULT_OK);
+        Intent intent=new Intent();
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        intent.setType("audio/*");
+        startActivityForResult(Intent.createChooser(intent, "Selecciona un archivo de musica"), PICKFILE_RESULT_CODE_AUDIO);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode){
+            case PICKFILE_RESULT_CODE_AUDIO:
+                Toast.makeText(this, "LLEGO..", Toast.LENGTH_SHORT).show();
+                if(resultCode==RESULT_OK){
+                    Uri uri=data.getData();
+                    try {
+                        mediaPlayer.setDataSource(this, uri);
+                        mediaPlayer.prepare();
+                        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                            @Override
+                            public void onPrepared(MediaPlayer mp) {
+                                handler.post(new Runnable() {
+                                    public void run() {
+                                        mediaController.show(20000);
+                                        mediaPlayer.start();
+                                    }
+                                });
+                            }
+                        });
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+            case PICKFILE_RESULT_CODE_VIDEO:
+
+                break;
+        }
+    }
+
+    private void startActivityForResult(Intent intent) {
+        //Log.println(1, "TAG", "HE LLEGADO AL PLAYERACTIVITY");
+        //Bundle bundle=intent.getBundleExtra("DATA");
+        //String msn=bundle.getString("DATA");
+        //Toast.makeText(this, "File Clicked: " + msn, Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -107,12 +187,12 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
 
     @Override
     public boolean canSeekBackward() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean canSeekForward() {
-        return false;
+        return true;
     }
 
     @Override
@@ -120,15 +200,6 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
         return 0;
     }
 
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        try {
-            mediaPlayer.stop();
-            mediaPlayer.prepare();
-            mediaPlayer.release();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        super.onActivityResult(requestCode, resultCode, data);
-    }
+
 
 }

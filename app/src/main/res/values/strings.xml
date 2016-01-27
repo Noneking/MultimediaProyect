@@ -3,4 +3,8 @@
     <string name="title_activity_player">PlayerActivity</string>
     <string name="player_textViewTittle" >Título de la canción</string>
     <string name="player_editTextUrl" >URL</string>
+    <string name="title_activity_file_chooser">FileChooser</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
 </resources>
