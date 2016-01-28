@@ -18,6 +18,16 @@ public class MainActivity extends Activity {
         startActivityForResult(intent, RESULT_OK);
     }
 
+    public void intent_record(View v){
+        Intent intent=new Intent(this, RecordActivity.class);
+        startActivityForResult(intent, RESULT_OK);
+    }
+
+    public void intent_video(View v){
+        Intent intent=new Intent(this, VideoActivity.class);
+        startActivityForResult(intent, RESULT_OK);
+    }
+
     private void startActivityForResult(Intent intent) {
 
     }

@@ -39,7 +39,8 @@
             android:layout_height="match_parent"
             android:layout_width="match_parent"
             android:src="@drawable/camera_128x128"
-            android:background="#64cc52"/>
+            android:background="#64cc52"
+            android:onClick="intent_video"/>
 
     </LinearLayout>
 
@@ -55,7 +56,8 @@
             android:layout_height="match_parent"
             android:layout_width="match_parent"
             android:src="@drawable/record_128x128"
-            android:background="#fb6464" />
+            android:background="#fb6464"
+            android:onClick="intent_record"/>
 
     </LinearLayout>
 
