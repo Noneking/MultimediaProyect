@@ -11,6 +11,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageButton;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ public class RecordActivity extends Activity implements ImageButton.OnClickListe
 
     ImageButton imageButtonStop;
     ImageButton imageButtonPlayPause;
+    EditText editText;
 
     private MediaRecorder myAudioRecorder;
     private String outputFile = null;
@@ -36,6 +38,7 @@ public class RecordActivity extends Activity implements ImageButton.OnClickListe
     public void initComponents(){
         imageButtonStop= (ImageButton) findViewById(R.id.record_imageButtonStop);
         imageButtonPlayPause= (ImageButton) findViewById(R.id.record_imageButtonPlayPause);
+        editText= (EditText) findViewById(R.id.record_editText_fileName);
         initListeners();
     }
 
@@ -47,8 +50,8 @@ public class RecordActivity extends Activity implements ImageButton.OnClickListe
 
     private void initActions() {
         imageButtonStop.setEnabled(false);
-        outputFile = Environment.getExternalStorageDirectory().getAbsolutePath() + "/recording.mp3";
-        Log.d("myTag", Environment.getExternalStorageDirectory().getAbsolutePath()+ "/recording.mp3");
+        outputFile = Environment.getExternalStorageDirectory().getAbsolutePath()+"/"+editText.getText()+".mp3";
+        Log.d("myTag", Environment.getExternalStorageDirectory().getAbsolutePath()+"/"+editText.getText()+".mp3");
         myAudioRecorder=new MediaRecorder();
         myAudioRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         myAudioRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
@@ -81,11 +84,15 @@ public class RecordActivity extends Activity implements ImageButton.OnClickListe
                 imageButtonStop.setEnabled(false);
                 myAudioRecorder.stop();
                 myAudioRecorder.release();
+                imageButtonPlayPause.setBackground(getResources().getDrawable(R.mipmap.record_play));
+                playAndStop="PLAY";
+                initComponents();
                 break;
             case R.id.record_imageButtonPlayPause:
                 switch(playAndStop){
                     case "PLAY":
                         try {
+                            initComponents();
                             myAudioRecorder.prepare();
                             myAudioRecorder.start();
                             imageButtonStop.setEnabled(true);
