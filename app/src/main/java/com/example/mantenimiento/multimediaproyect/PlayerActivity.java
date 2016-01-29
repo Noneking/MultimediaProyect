@@ -7,17 +7,21 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.MediaController;
 import android.widget.Switch;
 import android.widget.Toast;
 
 import java.io.IOException;
 
-public class PlayerActivity extends Activity implements MediaController.MediaPlayerControl, MediaPlayer.OnPreparedListener, Switch.OnCheckedChangeListener {
+public class PlayerActivity extends Activity implements MediaController.MediaPlayerControl, MediaPlayer.OnPreparedListener, Switch.OnCheckedChangeListener, View.OnTouchListener {
 
     private MediaController mediaController;
     private MediaPlayer mediaPlayer;
@@ -25,10 +29,11 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
 
     Uri uri;
 
-    Switch switch_url;
     Switch switch_stream;
-    EditText editText_url;
     EditText editText_stream;
+    LinearLayout player_layout;
+
+    private String audio;
 
     private static final int PICKFILE_RESULT_CODE_AUDIO=1;
     private static final int PICKFILE_RESULT_CODE_VIDEO=2;
@@ -42,17 +47,37 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
         initOperations();
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_player, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId())
+        {
+            case R.id.player_filechooser:
+                Intent intent=new Intent();
+                intent.setAction(Intent.ACTION_GET_CONTENT);
+                intent.setType("audio/*");
+                startActivityForResult(Intent.createChooser(intent, "Selecciona un archivo de musica"), PICKFILE_RESULT_CODE_VIDEO);
+                break;
+        }
+        return true;
+    }
+
     public void initViews(){
-        switch_url= (Switch) findViewById(R.id.player_switchUrl);
         switch_stream= (Switch) findViewById(R.id.player_switchStream);
-        editText_url= (EditText) findViewById(R.id.editTextUrl);
         editText_stream= (EditText) findViewById(R.id.editTextStream);
+        player_layout= (LinearLayout) findViewById(R.id.player_mainLayout);
         initListeners();
     }
 
     public void initListeners(){
-        switch_url.setOnCheckedChangeListener(this);
         switch_stream.setOnCheckedChangeListener(this);
+        player_layout.setOnTouchListener(this);
     }
 
     public void initOperations(){
@@ -82,12 +107,12 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
         }
     }
 
-    public void fileChooserOnClickEvent(View v){
-        Intent intent=new Intent();
-        intent.setAction(Intent.ACTION_GET_CONTENT);
-        intent.setType("audio/*");
-        startActivityForResult(Intent.createChooser(intent, "Selecciona un archivo de musica"), PICKFILE_RESULT_CODE_AUDIO);
-    }
+//    public void fileChooserOnClickEvent(View v){
+//        Intent intent=new Intent();
+//        intent.setAction(Intent.ACTION_GET_CONTENT);
+//        intent.setType("audio/*");
+//        startActivityForResult(Intent.createChooser(intent, "Selecciona un archivo de musica"), PICKFILE_RESULT_CODE_AUDIO);
+//    }
 
     Runnable runnable=new Runnable() {
         @Override
@@ -125,38 +150,36 @@ public class PlayerActivity extends Activity implements MediaController.MediaPla
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case PICKFILE_RESULT_CODE_AUDIO:
-                if(resultCode==RESULT_OK){
-                    uri=data.getData();
-                    switch_url.setChecked(false);
-                    switch_stream.setChecked(false);
-                    initPlayer("");
+    public boolean onTouch(View v, MotionEvent event) {
+        if(mediaPlayer!=null){
+            if(mediaPlayer.isPlaying()){
+                if(mediaController.isShown()){
+                    mediaController.hide();
+                }else{
+                    mediaController.show();
                 }
-                break;
-            case PICKFILE_RESULT_CODE_VIDEO:
+            }
+        }
+        return true;
+    }
 
-                break;
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(resultCode==RESULT_OK){
+             audio=data.getDataString();
+             switch_stream.setChecked(false);
+             initPlayer(audio);
         }
     }
 
     @Override
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        switch (buttonView.getId()){
-            case R.id.player_switchUrl:
-                if(switch_url.isChecked()){
-                    mediaPlayer.pause();
-                    switch_stream.setChecked(false);
-                    initPlayer(editText_url.getText().toString());
-                }
-                break;
-            case R.id.player_switchStream:
-                if(switch_stream.isChecked()){
-                    mediaPlayer.pause();
-                    switch_url.setChecked(false);
-                    initPlayer(editText_stream.getText().toString());
-                }
+        if(switch_stream.isChecked()){
+            mediaPlayer.pause();
+            initPlayer(editText_stream.getText().toString());
+        }else{
+            mediaPlayer.pause();
+            mediaController.hide();
         }
     }
 

@@ -144,9 +144,9 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
             video_layout_tab_streamVideo= (LinearLayout) findViewById(R.id.video_tab_streamVideo);
 
             progressDialog=new ProgressDialog(this);
-            progressDialog.setMessage("Buffering...");
+            progressDialog.setMessage("Loading...");
             progressDialog.setIndeterminate(false);
-            progressDialog.setCancelable(false);
+            progressDialog.setCancelable(true);
 
             actionBar.show();
         }else {
@@ -281,7 +281,7 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
     }
 
     public void videoPrepare(){
-        //progressDialog.show();
+        progressDialog.show();
         mediaController=new MediaController(this);
         mediaController.setAnchorView(videoView);
         videoView.setMediaController(mediaController);
@@ -294,7 +294,7 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
     @Override
     public void onPrepared(MediaPlayer mp) {
         videoView.start();
-        //progressDialog.dismiss();
+        progressDialog.dismiss();
         tabs.setCurrentTab(1);
         currentTab=1;
     }

@@ -42,7 +42,6 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:weightSum="3"
             android:orientation="horizontal">
 
             <LinearLayout
@@ -66,14 +65,6 @@
                         android:text="Streaming"
                         android:layout_gravity="center_horizontal"/>
 
-                    <Switch
-                        android:id="@+id/player_switchUrl"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Url"
-                        android:layout_gravity="center_horizontal"/>
-
                 </LinearLayout>
 
                 <LinearLayout
@@ -89,15 +80,8 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="@string/player_editTextStream_hint"
-                        android:text="@string/player_editTextStream"/>
-
-                    <EditText
-                        android:id="@+id/editTextUrl"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:hint="@string/player_editTextUrl_hint"
-                        android:text="@string/player_editTextUrl"/>
+                        android:text="@string/player_editTextStream"
+                        android:maxLines="1"/>
 
                 </LinearLayout>
 
@@ -105,25 +89,8 @@
 
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="2"
-                android:orientation="vertical">
-
-
-
-                <ImageButton
-                    android:id="@+id/imageButton1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/folder_128x128"
-                    android:onClick="fileChooserOnClickEvent"/>
-
             </LinearLayout>
 
         </LinearLayout>
 
     </LinearLayout>
-
-</LinearLayout>

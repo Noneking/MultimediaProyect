@@ -60,24 +60,6 @@ public class RecordActivity extends Activity implements ImageButton.OnClickListe
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater=getMenuInflater();
-        inflater.inflate(R.menu.menu_record, menu);
-        return super.onCreateOptionsMenu(menu);
-
-    }
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch(item.getItemId())
-        {
-            case R.id.action_settings:
-
-                break;
-        }
-        return true;
-    }
-
-    @Override
     public void onClick(View v) {
         switch(v.getId()){
             case R.id.record_imageButtonStop:
