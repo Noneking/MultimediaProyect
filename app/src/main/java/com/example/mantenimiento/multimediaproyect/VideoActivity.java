@@ -3,6 +3,7 @@ package com.example.mantenimiento.multimediaproyect;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Fragment;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -15,6 +16,9 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.DragEvent;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -24,8 +28,13 @@ import android.view.View;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
+import android.widget.AdapterView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.MediaController;
 import android.widget.TabHost;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
@@ -39,7 +48,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-public class VideoActivity extends Activity implements TabHost.OnTabChangeListener, MediaPlayer.OnPreparedListener, View.OnTouchListener {
+public class VideoActivity extends Activity implements TabHost.OnTabChangeListener, MediaPlayer.OnPreparedListener, View.OnTouchListener, ListView.OnItemClickListener{
 
     Resources res;
 
@@ -50,76 +59,39 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
     MediaController mediaController;
 
     ActionBar actionBar;
+    ProgressDialog progressDialog;
+    ListView listView;
+    LinearLayout video_layout_tab_recordVideo;
+    LinearLayout video_layout_tab_playVideo;
+    LinearLayout video_layout_tab_streamVideo;
 
-    private View currentTabView;
-    private View previewTabView;
     private int currentTab;
 
     private static final int PICKFILE_RESULT_CODE_VIDEO=1;
 
-    private String video="http://www.ebookfrenzy.com/android_book/movie.mp4";
-    //private String video="http://usher.justin.tv/api/channel/hls/officialgetright.m3u8?allow_source=true&token=%7B%22user_id%22%3Anull%2C%22channel%22%3A%22officialgetright%22%2C%22expires%22%3A1453987314%2C%22chansub%22%3A%7B%22view_until%22%3A1924905600%2C%22restricted_bitrates%22%3A%5B%5D%7D%2C%22private%22%3A%7B%22allowed_to_view%22%3Atrue%7D%2C%22privileged%22%3Afalse%2C%22source_restricted%22%3Afalse%7D&sig=5afab3abd8907236b60b518c00b13d6f7197fc7d";
-    private File file;
-    private FileWriter fw;
-    private FileReader fr;
-    private FileOutputStream fos;
-    private FileInputStream fis;
-    private InputStreamReader isr;
-    private BufferedReader br;
+    private FullList fullList;
 
-    private String fileName="video_save.txt";
+    private String video="http://www.ebookfrenzy.com/android_book/movie.mp4";
+
     private int ORIENTATION;
 
-    private static final int ANIMATION_TIME = 240;
-
-    OrientationEventListener mOrientationListener;
+    private GestureDetector gestureDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video);
 
+        gestureDetector = new GestureDetector(this, new GestureListener());
+
         ORIENTATION=this.getResources().getConfiguration().orientation;
-        writeFile();
-        readFile();
 
         initComponents();
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle savedInstanceState) {
-        super.onSaveInstanceState(savedInstanceState);
-        savedInstanceState.putInt("POSITION", videoView.getCurrentPosition());
-        savedInstanceState.putString("VIDEO", video);
-        ORIENTATION=this.getResources().getConfiguration().orientation;
-        restartActivity();
-    }
-
-    @Override
-    public void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        int position= savedInstanceState.getInt("POSITION");
-        video=savedInstanceState.getString("VIDEO");
-        //readFile();
-        videoPrepare();
-        videoView.seekTo(position);
-    }
-
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        //myOrientationEventListener.disable();
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater=getMenuInflater();
+        MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_video, menu);
         return super.onCreateOptionsMenu(menu);
     }
@@ -138,14 +110,20 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
         return true;
     }
 
-    private void restartActivity() {
-
-    }
-
     private void initComponents() {
         actionBar=getActionBar();
         if(ORIENTATION==1){
             tabs= (TabHost) findViewById(R.id.video_tabHost);
+            listView= (ListView) findViewById(R.id.video_listView);
+            video_layout_tab_recordVideo= (LinearLayout) findViewById(R.id.video_tab_recordVideo);
+            video_layout_tab_playVideo= (LinearLayout) findViewById(R.id.video_tab_playVideo);
+            video_layout_tab_streamVideo= (LinearLayout) findViewById(R.id.video_tab_streamVideo);
+
+            progressDialog=new ProgressDialog(this);
+            progressDialog.setMessage("Buffering...");
+            progressDialog.setIndeterminate(false);
+            progressDialog.setCancelable(false);
+
             actionBar.show();
         }else {
             actionBar.hide();
@@ -158,19 +136,22 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
     private void initListeners() {
         if(ORIENTATION==1){
             tabs.setOnTabChangedListener(this);
+
+            video_layout_tab_recordVideo.setOnTouchListener(this);
+            video_layout_tab_playVideo.setOnTouchListener(this);
+            video_layout_tab_streamVideo.setOnTouchListener(this);
         }
 
         videoView.setOnPreparedListener(this);
         videoView.setOnTouchListener(this);
+        listView.setOnTouchListener(this);
+        listView.setOnItemClickListener(this);
 
         initOperations();
     }
 
     private void initOperations() {
-        readFile();
         if(ORIENTATION==1){
-            currentTabView=tabs.getCurrentView();
-            previewTabView=tabs.getCurrentView();
             res=getResources();
             tabs.setup();
 
@@ -194,192 +175,98 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
 
             tabs.setCurrentTab(1);
             currentTab=1;
-            previewTabView=tabs.getCurrentView();
         }else{
             videoPrepare();
+        }
+        loadList();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle savedInstanceState) {
+        if(tabs.getCurrentTab()==1){
+            super.onSaveInstanceState(savedInstanceState);
+
+            if(videoView.isPlaying()){
+                videoView.pause();
+            }
+
+            savedInstanceState.putInt("POSITION", videoView.getCurrentPosition());
+            savedInstanceState.putString("VIDEO", video);
+            ORIENTATION=this.getResources().getConfiguration().orientation;
         }
     }
 
     @Override
-    public void onTabChanged(String tabId) {
-        boolean paused=false;
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        int position= savedInstanceState.getInt("POSITION");
+        video=savedInstanceState.getString("VIDEO");
 
-        currentTabView=tabs.getCurrentView();
-        if(tabs.getCurrentTab()>currentTab){
-            previewTabView.setAnimation(outToLeftAnimation());
-            currentTabView.setAnimation(inFromRightAnimation());
-        }else{
-            //previewTabView.setAnimation(outToRightAnimation());
-            //currentTabView.setAnimation(inFromLeftAnimation());
-        }
-        previewTabView=currentTabView;
-        currentTab=tabs.getCurrentTab();
+        ORIENTATION=this.getResources().getConfiguration().orientation;
 
-        //Tabs Operations
-        switch (tabs.getCurrentTab()){
-            case 0:
-                videoView.pause();//suspend
-                paused=true;
-                break;
-            case 1:
-                if(paused==true){
-                    videoView.start();
-                }else {
-                    videoPrepare();
-                }
-                break;
-            case 2:
-                videoView.pause();
-                paused=true;
-                break;
-        }
+        videoPrepare();
+        videoView.seekTo(position);
+    }
+
+//    @Override
+//    public void onConfigurationChanged(Configuration newConfig) {
+//        super.onConfigurationChanged(newConfig);
+//    }
+
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        //myOrientationEventListener.disable();
+//    }
+
+    private void loadList() {
+        fullList=new FullList();
+        listView.setAdapter(new VideoListAdapter(this, fullList.getArrayList()) {
+            @Override
+            public void onEntrada(Object entrada, View view) {
+                ImageView img= (ImageView) view.findViewById(R.id.item_imageView);
+                img.setBackgroundResource(R.drawable.twitch_128x128);
+                TextView titulo= (TextView) view.findViewById(R.id.item_textViewTitle);
+                titulo.setText(((VideoItemList) entrada).getTitulo());
+                TextView subtitulo= (TextView) view.findViewById(R.id.item_textViewSubTitle);
+                subtitulo.setText(((VideoItemList) entrada).getSubtitulo());
+            }
+        });
     }
 
     public void videoPrepare(){
+        progressDialog.show();
         mediaController=new MediaController(this);
         mediaController.setAnchorView(videoView);
         videoView.setMediaController(mediaController);
         videoView.setVideoPath(video);
-    }
-
-    public void videoStart(){
-        videoView.start();
-    }
-
-    private Animation inFromRightAnimation()
-    {
-        Animation inFromRight = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 1.0f, Animation.RELATIVE_TO_PARENT, 0.0f,
-        Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f);
-        return setProperties(inFromRight);
-    }
-
-    private Animation outToRightAnimation()
-    {
-        Animation outToRight = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 1.0f,
-        Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f);
-        return setProperties(outToRight);
-    }
-
-    private Animation inFromLeftAnimation()
-    {
-        Animation inFromLeft = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, -1.0f, Animation.RELATIVE_TO_PARENT, 0.0f,
-        Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f);
-        return setProperties(inFromLeft);
-    }
-
-    private Animation outToLeftAnimation()
-    {
-        Animation outtoLeft = new TranslateAnimation(Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, -1.0f,
-        Animation.RELATIVE_TO_PARENT, 0.0f, Animation.RELATIVE_TO_PARENT, 0.0f);
-        return setProperties(outtoLeft);
-    }
-
-    private Animation setProperties(Animation animation)
-    {
-        animation.setDuration(ANIMATION_TIME);
-        animation.setInterpolator(new AccelerateInterpolator());
-        return animation;
-    }
-
-    public void writeFile(){
-        try {
-            file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/", fileName);
-            fw=new FileWriter(file);
-            fw.write(video);
-            //fw.append(video);
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                fw.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-//        try {
-//            file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/", fileName);
-//            fos = openFileOutput(fileName, this.MODE_PRIVATE);
-//            fos.write(video.getBytes());
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } finally {
-//            try {
-//                fos.close();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-    }
-
-    public void readFile(){
-        try {
-            file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/", fileName);
-            fr=new FileReader(file);
-            br=new BufferedReader(fr);
-            String text="";
-            //while((text = br.readLine()) != null) {
-                text=br.readLine();
-            //}
-            video=text;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                br.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }finally {
-                try {
-                    fr.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }
-
-//        try {
-//            file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/", fileName);
-//            fis = this.openFileInput(fileName);
-//            isr=new InputStreamReader(fis);
-//            br=new BufferedReader(isr);
-//            StringBuilder sb = new StringBuilder();
-//            String line;
-//            while ((line = br.readLine()) != null) {
-//                sb.append(line);
-//            }
-//            video=line;
-//            br.close();
-//            isr.close();
-//            fis.close();
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        videoView.requestFocus();
     }
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        videoStart();
+        videoView.start();
+        progressDialog.dismiss();
+        tabs.setCurrentTab(1);
+        currentTab=1;
     }
+
+//    public void videoStart(){
+//        videoView.start();
+//    }
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        if(mediaController.isShown()){
-            mediaController.hide();
-        }else{
-            mediaController.show();
+        if(tabs.getCurrentTab()==1){
+            if(videoView.isPlaying()) {
+                if (mediaController.isShown()) {
+                    mediaController.hide();
+                } else {
+                    mediaController.show();
+                }
+            }
         }
-        return true;
+        return gestureDetector.onTouchEvent(event);
     }
 
     @Override
@@ -389,10 +276,125 @@ public class VideoActivity extends Activity implements TabHost.OnTabChangeListen
                 if(resultCode==RESULT_OK){
                     video=data.getDataString();
                     videoView.setVideoPath(data.getDataString());
-                    writeFile();
                     videoPrepare();
                 }
                 break;
         }
     }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        VideoItemList vil= (VideoItemList) listView.getItemAtPosition(position);
+        video=vil.getSubtitulo();
+        tabs.setCurrentTab(1);
+        videoPrepare();
+    }
+
+    private final class GestureListener extends SimpleOnGestureListener {
+
+        private static final int SWIPE_THRESHOLD = 100;
+        private static final int SWIPE_VELOCITY_THRESHOLD = 100;
+
+        @Override
+        public boolean onDown(MotionEvent e) {
+            return true;
+        }
+
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            boolean result = false;
+            try {
+                float diffY = e2.getY() - e1.getY();
+                float diffX = e2.getX() - e1.getX();
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                        if (diffX > 0) {
+                            onSwipeRight();
+                        } else {
+                            onSwipeLeft();
+                        }
+                    }
+                    result = true;
+                }
+                else if (Math.abs(diffY) > SWIPE_THRESHOLD && Math.abs(velocityY) > SWIPE_VELOCITY_THRESHOLD) {
+                    if (diffY > 0) {
+                        onSwipeBottom();
+                    } else {
+                        onSwipeTop();
+                    }
+                }
+                result = true;
+
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+            return result;
+        }
+    }
+
+    public void onSwipeTop() {
+        //Toast.makeText(this, "top", Toast.LENGTH_SHORT).show();
+        animationBottom();
+    }
+    public void onSwipeRight() {
+        //Toast.makeText(this, "right", Toast.LENGTH_SHORT).show();
+        animationLeft();
+    }
+    public void onSwipeLeft() {
+        //Toast.makeText(this, "left", Toast.LENGTH_SHORT).show();
+        animationRight();
+    }
+    public void onSwipeBottom() {
+        //Toast.makeText(this, "bottom", Toast.LENGTH_SHORT).show();
+        animationTop();
+    }
+
+    @Override
+    public void onTabChanged(String tabId) {
+
+        currentTab=tabs.getCurrentTab();
+
+        //Tabs Operations
+        switch (tabs.getCurrentTab()){
+            case 0:
+                if(videoView.isPlaying()){if(mediaController.isShown()){mediaController.hide();}}
+//                videoView.pause();//suspend
+                break;
+            case 1:
+                if(videoView.isPlaying()){videoView.start();}
+                break;
+            case 2:
+                if(videoView.isPlaying()){if(mediaController.isShown()){mediaController.hide();}}
+                break;
+        }
+    }
+
+    public void animationRight(){
+//        Toast.makeText(this,"animationRight",Toast.LENGTH_SHORT).show();
+        if(tabs.getCurrentTab()>2){
+            tabs.setCurrentTab(0);
+        }else{
+            tabs.setCurrentTab(tabs.getCurrentTab()+1);
+        }
+    }
+
+    public void animationLeft(){
+//        Toast.makeText(this,"animationLeft",Toast.LENGTH_SHORT).show();
+        if(tabs.getCurrentTab()==0){
+            tabs.setCurrentTab(2);
+        }else{
+            tabs.setCurrentTab(tabs.getCurrentTab()-1);
+        }
+    }
+
+    public void animationTop(){
+
+    }
+
+    public void animationBottom(){
+
+    }
+
 }
+
+

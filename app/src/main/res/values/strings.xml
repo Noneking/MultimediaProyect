@@ -1,17 +1,25 @@
 <resources>
+
+    //GENERAL
     <string name="app_name">MultimediaProyect</string>
     <string name="title_activity_player">PlayerActivity</string>
+
+    //PLAYER
     <string name="player_textViewTittle">Título de la canción</string>
     <string name="player_editTextUrl_hint">URL</string>
     <string name="player_editTextStream_hint">STREAM</string>
     <string name="player_editTextUrl"></string>
     <string name="player_editTextStream">http://listen.shoutcast.com/80splanet</string>
-    <string name="title_activity_file_chooser">FileChooser</string>
-    <string name="record_fileChooser">FileChooser</string>
-    <string name="video_fileChooser">FileChooser</string>
 
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
+    //RECORD
     <string name="title_activity_record">RecordActivity</string>
+    <string name="record_fileChooser">FileChooser</string>
+
+    //VIDEO
     <string name="title_activity_video">VideoActivity</string>
+    <string name="title_activity_file_chooser">FileChooser</string>
+    <string name="video_fileChooser">FileChooser</string>
+    <string name="video_itemList_textViewTitle"></string>
+    <string name="video_itemList_textViewSubTitle"></string>
+
 </resources>
